@@ -18,8 +18,11 @@ ARG UV_DEFAULT_INDEX
 # expected to be private registry
 ARG UV_INDEX_URL
 ARG UV_INSECURE_HOST
+ARG PACKAGE_VERSION=0.0.0
 # Ensure uv installs to the correct directory
 ENV UV_PROJECT_ENVIRONMENT=/usr/local
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=$PACKAGE_VERSION
+ENV SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AZUL_PLUGIN_OPENCTI=$PACKAGE_VERSION
 
 COPY debian.txt /tmp/src/
 RUN apt-get update && \
@@ -68,6 +71,7 @@ COPY --from=builder /usr/local /usr/local
 # run tests during build to verify dockerfile has all requirements
 FROM base AS tester
 ENV PIP_DISABLE_PIP_VERSION_CHECK=yes
+ENV FILE_MANAGER_AZURE_BLOB_CACHE_ENABLED=false
 ARG PIP_CERT
 ARG PIP_CLIENT_CERT
 ARG PIP_TRUSTED_HOST
