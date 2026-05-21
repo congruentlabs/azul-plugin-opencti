@@ -42,11 +42,13 @@ RUN uv build . --out-dir /tmp/
 RUN uv pip uninstall --system azul-plugin-opencti
 RUN uv pip install --system --no-deps --find-links /tmp/ azul-plugin-opencti==$(hatchling version)
 
-# Upgrade to dev azul dependencies or upgrade non-dev azul dependencies depending on branch.
-RUN if [ "$GIT_BRANCH_NAME" = "refs/heads/dev" ]; then \
+# Optionally upgrade Azul dependencies from a private index when one is supplied by the build environment.
+RUN if [ -n "$UV_INDEX_URL" ]; then \
+    if [ "$GIT_BRANCH_NAME" = "refs/heads/dev" ]; then \
     uv pip freeze | grep 'azul-.*==' | grep -v '^azul-plugin-opencti' | cut -d "=" -f 1 | xargs -I {} uv pip install --extra-index-url=$UV_INDEX_URL --system --upgrade --no-deps --prerelease allow '{}>=0.0.0-dev'; \
     else \
     uv pip freeze | grep 'azul-.*==' | grep -v '^azul-plugin-opencti' | cut -d "=" -f 1 | xargs -I {} uv pip install --extra-index-url=$UV_INDEX_URL --system --upgrade --no-deps '{}>=0.0.0'; \
+    fi; \
     fi
 
 FROM $REGISTRY/$BASE_IMAGE:$BASE_TAG AS base
@@ -84,8 +86,7 @@ USER azul
 # test scripts will be installed to the local user bin dir. Add local bin path for the azul user.
 ENV PATH="/home/azul/.local/bin:$PATH"
 COPY --chown=azul ./tests /tmp/tests
-RUN --mount=type=secret,uid=$UID,gid=$GID,id=testSecret export $(cat /run/secrets/testSecret) && \
-    pytest -o cache_dir=/tmp/cache --tb=short /tmp/tests
+RUN pytest -o cache_dir=/tmp/cache --tb=short /tmp/tests
 # generate empty file to copy to `release` stage so this stage is not skipped due to optimisations.
 RUN touch /tmp/testingpassed
 
